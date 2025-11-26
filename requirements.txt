@@ -1,0 +1,11 @@
+# SSH接続用
+paramiko
+
+# グラフ理論・依存関係解析用
+networkx==3.5
+
+# Excel出力用
+openpyxl
+
+# EXE化用 (開発・ビルド時に使用)
+pyinstaller

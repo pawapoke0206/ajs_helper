@@ -1,0 +1,7 @@
+{
+  "comenv_initial_vars_by_bank": {
+    "SampleBank": {
+      "BSDIR": "/usr/home/sample"
+    }
+  }
+}
