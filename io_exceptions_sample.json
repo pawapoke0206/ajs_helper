@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "bank": "*",
+      "shell": "ENV_SHELL_*.sh",
+      "unit": "UNIT_NAME_B",
+      "inputs": [
+        "/in/${EN[INPUT_FILE]}"
+      ],
+      "outputs": [
+        "/out/${EN[OUTPUT_FILE]}"
+      ],
+      "source_tag": "例外JSON (AJS環境変数)"
+    }
+  ]
+}

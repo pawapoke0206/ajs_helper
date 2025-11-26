@@ -1,0 +1,32 @@
+# --- Python関連 ---
+__pycache__/
+*.pyc
+
+# --- PyInstaller (EXE化) 関連 ---
+build/
+dist/
+*.spec
+
+# --- ログ・一時ファイル・出力結果 ---
+log/
+*_debug.log
+*.log
+temp_analysis/
+ジョブ定義取得/
+入出力解析/
+先行関係解析/
+依存関係解析/
+
+# --- 機密情報・環境依存設定 ---
+# これらは自分の環境には残りますが、GitHubにはアップロードされません
+history.json
+config.json
+io_exceptions.json
+AJS_trans.prm
+
+# --- バックアップ・作業用 ---
+old/
+
+# --- OS定義 ---
+.DS_Store
+Thumbs.db
