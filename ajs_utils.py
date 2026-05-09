@@ -81,13 +81,20 @@ _DB_VAR_RE = re.compile(
 )
 
 # サブシェル呼び出しパターン（管理テーブル操作）
-# 更新系: MRKM900000, MRKH900000, MRKD900000
-# 参照系: MRKM900005, MRKH900005
+# 更新系/参照系のサブシェル名はconfig.jsonから読み込む（顧客固有名をソースに含めないため）
 _SUB_SHELL_RE = re.compile(
     r'\$\{?(?:SHLDIR|BSDIR)\}?(?:/SHL)?/(\w+)\.sh\s+(\w+)'
 )
-_SUB_SHELL_WRITE = {"MRKM900000", "MRKH900000", "MRKD900000"}
-_SUB_SHELL_READ = {"MRKM900005", "MRKH900005"}
+def _load_sub_shell_sets():
+    from ajs_constants import CONFIG_FILE
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+        return (set(cfg.get("sub_shell_write", [])),
+                set(cfg.get("sub_shell_read", [])))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return (set(), set())
+_SUB_SHELL_WRITE, _SUB_SHELL_READ = _load_sub_shell_sets()
 
 
 def _is_table_name(name):
@@ -189,12 +196,13 @@ def load_db_exceptions(base_path):
 
 
 def _get_mgmt_table(sub_shell_name):
-    """サブシェル名から対応する管理テーブル名を返す"""
-    mapping = {
-        "MRKM900000": "DMR233M00",
-        "MRKM900005": "DMR233M00",
-        "MRKH900000": "DMR234H00",
-        "MRKH900005": "DMR234H00",
-        "MRKD900000": "DMR235D00",
-    }
+    """サブシェル名から対応する管理テーブル名を返す。
+    マッピングはconfig.json の "mgmt_table_mapping" から読み込む。
+    顧客固有のシェル名・テーブル名をソースコードに含めないため外部化している。"""
+    from ajs_constants import CONFIG_FILE
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            mapping = json.load(f).get("mgmt_table_mapping", {})
+    except (FileNotFoundError, json.JSONDecodeError):
+        mapping = {}
     return mapping.get(sub_shell_name, "UNKNOWN")

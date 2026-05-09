@@ -18,7 +18,7 @@ GUIやSSHには依存しない純粋なロジックモジュール。
 import os
 import collections
 
-from ajs_constants import LOG_DIR
+from ajs_constants import LOG_DIR, CONFIG_FILE
 from ajs_utils import make_logger, pre_normalize
 from ajs_rel_logic import pre_compute_need
 
@@ -50,7 +50,7 @@ def discover_parent_jobnets(type_lines, range_path):
 
     Args:
         type_lines: "%TY\\t%JN" 形式の行リスト（list）または改行区切り文字列
-        range_path: 探索範囲のAJSパス（例: "/BS_info"）
+        range_path: 探索範囲のAJSパス（例: "/グループ名"）
 
     Returns:
         list: 親ジョブネットのパス一覧
@@ -439,9 +439,13 @@ def _bfs_trace(G, target_unit_fulls, producer_map, record_by_full,
     # --- DB依存の除外テーブル ---
     # なぜ除外するか: これらは全JNから参照/更新される共用管理テーブルで、
     # 追跡するとほぼ全ユニットが必要ユニットに入ってしまい結果が意味をなさない。
-    # DMR233M00/234H00/235D00: 開始/終了時刻管理テーブル
-    # UNY001O00: 全体共用の管理系テーブル（一部レコード参照のみ）
-    _DB_EXCLUDE_TABLES = {"DMR233M00", "DMR234H00", "DMR235D00", "UNY001O00"}
+    # 顧客固有のテーブル名をソースコードに含めないためconfig.jsonから読み込む。
+    try:
+        import json as _json
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as _f:
+            _DB_EXCLUDE_TABLES = set(_json.load(_f).get('db_exclude_tables', []))
+    except (FileNotFoundError, _json.JSONDecodeError):
+        _DB_EXCLUDE_TABLES = set()
 
     # --- DB依存のproducer探索 ---
     def _search_db_inputs(consumer_unit_full, current_layer, layer_discovered):

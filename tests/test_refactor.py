@@ -35,17 +35,17 @@ class TestBuildFileIndex:
         """基本動作: ファイルが辞書に登録される"""
         # tmp_path はpytestが自動で作る一時ディレクトリ
         (tmp_path / "SHL").mkdir()
-        (tmp_path / "SHL" / "MRKD001015.sh").write_text("#!/bin/ksh")
+        (tmp_path / "SHL" / "JOB001.sh").write_text("#!/bin/ksh")
         (tmp_path / "TBL").mkdir()
-        (tmp_path / "TBL" / "FSYOKI").write_text("data")
-        (tmp_path / "comenv").write_text("BSDIR=/users/SAM01")
+        (tmp_path / "TBL" / "DATA_TBL").write_text("data")
+        (tmp_path / "comenv").write_text("APPDIR=/users/APP01")
 
         index = _build_file_index(str(tmp_path))
 
-        assert "MRKD001015.sh" in index
-        assert "FSYOKI" in index
+        assert "JOB001.sh" in index
+        assert "DATA_TBL" in index
         assert "comenv" in index
-        assert index["MRKD001015.sh"].endswith("MRKD001015.sh")
+        assert index["JOB001.sh"].endswith("JOB001.sh")
 
     def test_nested_directories(self, tmp_path):
         """サブフォルダの深い階層でも見つかる"""
@@ -100,7 +100,7 @@ class TestFilterProducersByGraph:
 
     【実機で確認すべきこと】
     - 実際のajsprint出力から構築したグラフで、
-      依存関係解析（Tab5）の結果が変更前と同一であること
+      依存関係解析の結果が変更前と同一であること
     - 特に producer が複数ある場合の絞り込み結果を比較
     """
 
@@ -203,16 +203,16 @@ class TestPreNormalize:
     """
 
     def test_strip_service_prefix(self):
-        """AJSROOT1: プレフィックスが除去される"""
-        assert pre_normalize("AJSROOT1:/BS_info/job1", "") == "/BS_info/job1"
+        """SVC1: プレフィックスが除去される"""
+        assert pre_normalize("SVC1:/PROD/job1", "") == "/PROD/job1"
 
     def test_remove_base_dir(self):
         """base部分が除去される"""
-        assert pre_normalize("/BS_info/daily/job1", "/BS_info") == "/daily/job1"
+        assert pre_normalize("/PROD/daily/job1", "/PROD") == "/daily/job1"
 
     def test_both(self):
         """プレフィックス除去 + base除去"""
-        assert pre_normalize("AJSROOT1:/BS_info/daily/job1", "/BS_info") == "/daily/job1"
+        assert pre_normalize("SVC1:/PROD/daily/job1", "/PROD") == "/daily/job1"
 
     def test_no_change(self):
         """変換不要なケース"""
@@ -228,10 +228,10 @@ class TestGetAncestors:
 
     def test_deep_path(self):
         """3階層のパス → 自分、親、祖父の順"""
-        result = _get_ancestors("/BS_info/daily/job1")
-        assert result[0] == "/BS_info/daily/job1"  # 自分
-        assert result[1] == "/BS_info/daily"        # 親
-        assert result[2] == "/BS_info"              # 祖父
+        result = _get_ancestors("/PROD/daily/job1")
+        assert result[0] == "/PROD/daily/job1"  # 自分
+        assert result[1] == "/PROD/daily"        # 親
+        assert result[2] == "/PROD"              # 祖父
 
     def test_single_level(self):
         """1階層 → 自分だけ"""
@@ -243,7 +243,7 @@ class TestPreComputeNeed:
     """先行ユニット計算のテスト。
 
     【実機で確認すべきこと】
-    - 実際のajsprintグラフで、Tab4の結果が変わっていないこと
+    - 実際のajsprintグラフで、結果が変わっていないこと
     """
 
     def _make_graph_with_map(self, edges=None, nodes=None):
@@ -295,15 +295,15 @@ class TestPreDescendants:
     """pre_descendants の辞書化テスト。
 
     テストケースはユーザーが設計:
-      ① /A を呼んだ時に /A/B, /A/C, /A/B/D が全部返るか
-      ② 辞書に /A → [/A/B, /A/C] が正しく入っているか
-      ③ 配下がないノード(/A/B/D)を呼んだ時に空で返るか
-      ④ 辞書のライフサイ��ル（グラフと一緒に作られ、一緒に消えるか）
-      ⑤ グラフに存在しないノードを呼んだ時にエラーにな��ないか
+      (1) /A を呼んだ時に /A/B, /A/C, /A/B/D が全部返るか
+      (2) 辞書に /A → [/A/B, /A/C] が正しく入っているか
+      (3) 配下がないノード(/A/B/D)を呼んだ時に空で返るか
+      (4) 辞書のライフサイクル（グラフと一緒に作られ、一緒に消えるか）
+      (5) グラフに存在しないノードを呼んだ時にエラーにならないか
 
     【実機で確認すべきこと】
-    - 実際のajsprintグ���フで Tab4/Tab5 の結果が変更前と同一であること
-    - 特にジョブネットの中にサブジョブネットがある構造（/net/sub_net/job）で
+    - 実際のajsprintグラフで結果が変更前と同一であること
+    - 特にジョブネットの中にサブジョブネットがある構造で
       子孫が正しく取れていること
     """
 
@@ -318,13 +318,13 @@ class TestPreDescendants:
         return G
 
     def test_01_all_descendants_returned(self):
-        """① /A を呼んだら /A/B, /A/C, /A/B/D が全部返る"""
+        """(1) /A を呼んだら /A/B, /A/C, /A/B/D が全部返る"""
         G = self._make_graph()
         result = set(pre_descendants(G, "/A"))
         assert result == {"/A/B", "/A/C", "/A/B/D"}
 
     def test_02_children_map_structure(self):
-        """② 辞書に /A → [/A/B, /A/C] と /A/B → [/A/B/D] が入っている"""
+        """(2) 辞書に /A → [/A/B, /A/C] と /A/B → [/A/B/D] が入っている"""
         G = self._make_graph()
         cmap = G.graph['children_map']
         # /A の直下の子
@@ -333,25 +333,24 @@ class TestPreDescendants:
         assert set(cmap["/A/B"]) == {"/A/B/D"}
 
     def test_03_leaf_node_returns_empty(self):
-        """③ 配下がないノード(/A/B/D)を呼んだら空が返る"""
+        """(3) 配下がないノード(/A/B/D)を呼んだら空が返る"""
         G = self._make_graph()
         result = list(pre_descendants(G, "/A/B/D"))
         assert result == []
 
     def test_04_lifecycle_tied_to_graph(self):
-        """④ children_mapはグラフの属性として持つので、グラフと一緒に消える"""
+        """(4) children_mapはグラフの属性として持つので、グラフと一緒に消える"""
         G = self._make_graph()
         # グラフ作成直後は辞書が存在する
         assert 'children_map' in G.graph
 
-        # グラフを破棄（変数を上書��）すれば辞書も一緒に消える
+        # グラフを破棄（変数を上書き）すれば辞書も一緒に消える
         G = None
         # Pythonのガベージコレクションにより、G と一緒に children_map も解放される
-        # （直接確認は難し��が、G が None なら辞書にもアクセスできない）
         assert G is None
 
     def test_05_nonexistent_node_returns_empty(self):
-        """⑤ グラフに存在しないノードを呼んでもエラーにならず空が返る"""
+        """(5) グラフに存在しないノードを呼んでもエラーにならず空が返る"""
         G = self._make_graph()
         result = list(pre_descendants(G, "/X/Y/Z"))
         assert result == []
@@ -360,15 +359,15 @@ class TestPreDescendants:
 # =====================================================================
 # 5. クロスジョブネット: 親ジョブネット自動判定のテスト
 #
-#    AJSの階層構造:
-#      /BS_info/01_定例          (group)
-#        /BS_info/01_定例/日次処理    (group)
-#          /BS_info/01_定例/日次処理/日次定例  (net) ← 親ジョブネット
-#        /BS_info/01_定例/月次処理    (group)
-#          /BS_info/01_定例/月次処理/月次1歴日  (net) ← 親ジョブネット
-#          /BS_info/01_定例/月次処理/月次2歴日  (net) ← 親ジョブネット
-#      /BS_info/02_監明          (group)
-#        /BS_info/02_監明/【監明】日次処理  (net) ← 親ジョブネット
+#    AJSの階層構造（テスト用ダミー）:
+#      /PROD/01_regular            (group)
+#        /PROD/01_regular/daily_proc    (group)
+#          /PROD/01_regular/daily_proc/daily_batch  (net) ← 親JN
+#        /PROD/01_regular/monthly_proc  (group)
+#          /PROD/01_regular/monthly_proc/monthly_1st  (net) ← 親JN
+#          /PROD/01_regular/monthly_proc/monthly_2nd  (net) ← 親JN
+#      /PROD/02_audit              (group)
+#        /PROD/02_audit/audit_daily  (net) ← 親JN
 #
 # =====================================================================
 from ajs_depend_logic import discover_parent_jobnets, find_parent_jobnet
@@ -381,137 +380,137 @@ class TestDiscoverParentJobnets:
     groupをスキップし最初にnetになるものだけを親ジョブネットとして抽出する。
     """
 
-    # テスト用のajsprint出力（設計書の例に対応）
+    # テスト用のajsprint出力
     SAMPLE_LINES = [
-        "g\t/BS_info/01_定例",
-        "g\t/BS_info/01_定例/日次処理",
-        "n\t/BS_info/01_定例/日次処理/日次定例",
-        "j\t/BS_info/01_定例/日次処理/日次定例/MRKD001",
-        "j\t/BS_info/01_定例/日次処理/日次定例/MRKD002",
-        "n\t/BS_info/01_定例/日次処理/日次定例/サブネット",  # netの中のnet → 親ではない
-        "j\t/BS_info/01_定例/日次処理/日次定例/サブネット/JOB1",
-        "g\t/BS_info/01_定例/月次処理",
-        "n\t/BS_info/01_定例/月次処理/月次1歴日",
-        "n\t/BS_info/01_定例/月次処理/月次2歴日",
-        "j\t/BS_info/01_定例/月次処理/月次1歴日/MRKM001",
-        "g\t/BS_info/02_監明",
-        "n\t/BS_info/02_監明/【監明】日次処理",
-        "j\t/BS_info/02_監明/【監明】日次処理/MRKD001",
+        "g\t/PROD/01_regular",
+        "g\t/PROD/01_regular/daily_proc",
+        "n\t/PROD/01_regular/daily_proc/daily_batch",
+        "j\t/PROD/01_regular/daily_proc/daily_batch/JOB001",
+        "j\t/PROD/01_regular/daily_proc/daily_batch/JOB002",
+        "n\t/PROD/01_regular/daily_proc/daily_batch/subnet",  # netの中のnet → 親ではない
+        "j\t/PROD/01_regular/daily_proc/daily_batch/subnet/JOB1",
+        "g\t/PROD/01_regular/monthly_proc",
+        "n\t/PROD/01_regular/monthly_proc/monthly_1st",
+        "n\t/PROD/01_regular/monthly_proc/monthly_2nd",
+        "j\t/PROD/01_regular/monthly_proc/monthly_1st/JOB010",
+        "g\t/PROD/02_audit",
+        "n\t/PROD/02_audit/audit_daily",
+        "j\t/PROD/02_audit/audit_daily/JOB001",
     ]
 
     def test_basic_discovery(self):
         """group配下の最初のnetが親ジョブネットとして抽出される"""
-        result = discover_parent_jobnets(self.SAMPLE_LINES, "/BS_info")
-        assert "/BS_info/01_定例/日次処理/日次定例" in result
-        assert "/BS_info/01_定例/月次処理/月次1歴日" in result
-        assert "/BS_info/01_定例/月次処理/月次2歴日" in result
-        assert "/BS_info/02_監明/【監明】日次処理" in result
+        result = discover_parent_jobnets(self.SAMPLE_LINES, "/PROD")
+        assert "/PROD/01_regular/daily_proc/daily_batch" in result
+        assert "/PROD/01_regular/monthly_proc/monthly_1st" in result
+        assert "/PROD/01_regular/monthly_proc/monthly_2nd" in result
+        assert "/PROD/02_audit/audit_daily" in result
 
     def test_fullspell_type(self):
         """ajsprintがフルスペル(net/group/job)で出力するパターンでも動作する"""
         lines = [
-            "group\t/BS_info/01_定例",
-            "net\t/BS_info/01_定例/日次定例",
-            "job\t/BS_info/01_定例/日次定例/MRKD001",
-            "net\t/BS_info/01_定例/月次1歴日",
+            "group\t/PROD/01_regular",
+            "net\t/PROD/01_regular/daily_batch",
+            "job\t/PROD/01_regular/daily_batch/JOB001",
+            "net\t/PROD/01_regular/monthly_1st",
         ]
-        result = discover_parent_jobnets(lines, "/BS_info")
+        result = discover_parent_jobnets(lines, "/PROD")
         assert len(result) == 2
-        assert "/BS_info/01_定例/日次定例" in result
-        assert "/BS_info/01_定例/月次1歴日" in result
+        assert "/PROD/01_regular/daily_batch" in result
+        assert "/PROD/01_regular/monthly_1st" in result
 
     def test_nested_net_excluded(self):
         """netの中のnet(サブネット)は親ジョブネットに含まれない"""
-        result = discover_parent_jobnets(self.SAMPLE_LINES, "/BS_info")
-        assert "/BS_info/01_定例/日次処理/日次定例/サブネット" not in result
+        result = discover_parent_jobnets(self.SAMPLE_LINES, "/PROD")
+        assert "/PROD/01_regular/daily_proc/daily_batch/subnet" not in result
 
     def test_count(self):
         """親ジョブネットは4つ"""
-        result = discover_parent_jobnets(self.SAMPLE_LINES, "/BS_info")
+        result = discover_parent_jobnets(self.SAMPLE_LINES, "/PROD")
         assert len(result) == 4
 
     def test_narrower_range(self):
-        """範囲を01_定例に絞ると、02_監明は含まれない"""
-        result = discover_parent_jobnets(self.SAMPLE_LINES, "/BS_info/01_定例")
+        """範囲を01_regularに絞ると、02_auditは含まれない"""
+        result = discover_parent_jobnets(self.SAMPLE_LINES, "/PROD/01_regular")
         assert len(result) == 3
-        assert "/BS_info/02_監明/【監明】日次処理" not in result
+        assert "/PROD/02_audit/audit_daily" not in result
 
     def test_empty_input(self):
         """空の入力 → 空リスト"""
-        assert discover_parent_jobnets([], "/BS_info") == []
+        assert discover_parent_jobnets([], "/PROD") == []
 
     def test_range_itself_is_net(self):
         """指定範囲そのものがnetの場合、それ自体が親ジョブネット"""
         lines = [
-            "n\t/BS_info/01_定例/日次定例",
-            "j\t/BS_info/01_定例/日次定例/JOB1",
+            "n\t/PROD/01_regular/daily_batch",
+            "j\t/PROD/01_regular/daily_batch/JOB1",
         ]
-        result = discover_parent_jobnets(lines, "/BS_info/01_定例/日次定例")
-        assert result == ["/BS_info/01_定例/日次定例"]
+        result = discover_parent_jobnets(lines, "/PROD/01_regular/daily_batch")
+        assert result == ["/PROD/01_regular/daily_batch"]
 
     def test_range_is_net_with_subnets(self):
         """範囲がnet+中にサブネットがある場合、範囲自身だけが親ジョブネット"""
         lines = [
-            "net\t/BS_info/01_定例/日次処理",
-            "net\t/BS_info/01_定例/日次処理/前処理",
-            "job\t/BS_info/01_定例/日次処理/前処理/JOB1",
-            "net\t/BS_info/01_定例/日次処理/後処理",
-            "job\t/BS_info/01_定例/日次処理/後処理/JOB2",
+            "net\t/PROD/01_regular/daily_proc",
+            "net\t/PROD/01_regular/daily_proc/pre_proc",
+            "job\t/PROD/01_regular/daily_proc/pre_proc/JOB1",
+            "net\t/PROD/01_regular/daily_proc/post_proc",
+            "job\t/PROD/01_regular/daily_proc/post_proc/JOB2",
         ]
-        result = discover_parent_jobnets(lines, "/BS_info/01_定例/日次処理")
+        result = discover_parent_jobnets(lines, "/PROD/01_regular/daily_proc")
         assert len(result) == 1
-        assert result == ["/BS_info/01_定例/日次処理"]
+        assert result == ["/PROD/01_regular/daily_proc"]
 
 
 class TestFindParentJobnet:
     """ユニットの親ジョブネット所属判定テスト。"""
 
     PARENT_JOBNETS = [
-        "/BS_info/01_定例/日次処理/日次定例",
-        "/BS_info/01_定例/月次処理/月次1歴日",
-        "/BS_info/01_定例/月次処理/月次2歴日",
-        "/BS_info/02_監明/【監明】日次処理",
+        "/PROD/01_regular/daily_proc/daily_batch",
+        "/PROD/01_regular/monthly_proc/monthly_1st",
+        "/PROD/01_regular/monthly_proc/monthly_2nd",
+        "/PROD/02_audit/audit_daily",
     ]
 
     def test_direct_child(self):
-        """日次定例配下のジョブ → 日次定例に所属"""
+        """daily_batch配下のジョブ → daily_batchに所属"""
         result = find_parent_jobnet(
-            "/BS_info/01_定例/日次処理/日次定例/MRKD001",
+            "/PROD/01_regular/daily_proc/daily_batch/JOB001",
             self.PARENT_JOBNETS)
-        assert result == "/BS_info/01_定例/日次処理/日次定例"
+        assert result == "/PROD/01_regular/daily_proc/daily_batch"
 
     def test_deep_child(self):
         """サブネット配下のジョブでも、最も深い親ジョブネットに所属"""
         result = find_parent_jobnet(
-            "/BS_info/01_定例/日次処理/日次定例/サブネット/JOB1",
+            "/PROD/01_regular/daily_proc/daily_batch/subnet/JOB1",
             self.PARENT_JOBNETS)
-        assert result == "/BS_info/01_定例/日次処理/日次定例"
+        assert result == "/PROD/01_regular/daily_proc/daily_batch"
 
     def test_different_parent(self):
-        """監明配下のジョブ → 監明に所属"""
+        """audit配下のジョブ → audit_dailyに所属"""
         result = find_parent_jobnet(
-            "/BS_info/02_監明/【監明】日次処理/MRKD001",
+            "/PROD/02_audit/audit_daily/JOB001",
             self.PARENT_JOBNETS)
-        assert result == "/BS_info/02_監明/【監明】日次処理"
+        assert result == "/PROD/02_audit/audit_daily"
 
     def test_not_found(self):
         """どの親ジョブネットにも属さない → None"""
         result = find_parent_jobnet(
-            "/BS_info/99_その他/JOB1",
+            "/PROD/99_other/JOB1",
             self.PARENT_JOBNETS)
         assert result is None
 
     def test_exact_match(self):
         """親ジョブネット自身を指定 → そのまま返す"""
         result = find_parent_jobnet(
-            "/BS_info/01_定例/月次処理/月次2歴日",
+            "/PROD/01_regular/monthly_proc/monthly_2nd",
             self.PARENT_JOBNETS)
-        assert result == "/BS_info/01_定例/月次処理/月次2歴日"
+        assert result == "/PROD/01_regular/monthly_proc/monthly_2nd"
 
     def test_partial_name_no_match(self):
         """パス名が部分一致するだけでは所属とみなさない"""
         result = find_parent_jobnet(
-            "/BS_info/01_定例/月次処理/月次2歴日追加/JOB1",
+            "/PROD/01_regular/monthly_proc/monthly_2nd_extra/JOB1",
             self.PARENT_JOBNETS)
         assert result is None
 
@@ -526,59 +525,59 @@ class TestFilterDepTextByJobnet:
     """ajsprintテキストを親ジョブネット単位にフィルタするテスト。"""
 
     SAMPLE_DEP_TEXT = "\n".join([
-        "n\t/BS/01/日次処理/日次定例\t",
-        "j\t/BS/01/日次処理/日次定例/MRKD001\tjobA,jobB,seq;",
-        "j\t/BS/01/日次処理/日次定例/MRKD002\t",
-        "n\t/BS/01/月次処理/月次1歴日\t",
-        "j\t/BS/01/月次処理/月次1歴日/MRKM001\t",
-        "n\t/BS/02/【監明】日次処理\t",
-        "j\t/BS/02/【監明】日次処理/MRKD001\t",
+        "n\t/NS/01/daily_proc/daily_batch\t",
+        "j\t/NS/01/daily_proc/daily_batch/JOB001\tjobA,jobB,seq;",
+        "j\t/NS/01/daily_proc/daily_batch/JOB002\t",
+        "n\t/NS/01/monthly_proc/monthly_1st\t",
+        "j\t/NS/01/monthly_proc/monthly_1st/JOB010\t",
+        "n\t/NS/02/audit_daily\t",
+        "j\t/NS/02/audit_daily/JOB001\t",
     ])
 
     def test_filter_daily(self):
-        """日次定例でフィルタ → 日次定例配下の3行だけ"""
+        """daily_batchでフィルタ → daily_batch配下の3行だけ"""
         result = filter_dep_text_by_jobnet(
-            self.SAMPLE_DEP_TEXT, "/BS/01/日次処理/日次定例")
+            self.SAMPLE_DEP_TEXT, "/NS/01/daily_proc/daily_batch")
         lines = result.strip().splitlines()
         assert len(lines) == 3
-        assert all("/BS/01/日次処理/日次定例" in line for line in lines)
+        assert all("/NS/01/daily_proc/daily_batch" in line for line in lines)
 
     def test_filter_monthly(self):
-        """月次1歴日でフィルタ → 2行"""
+        """monthly_1stでフィルタ → 2行"""
         result = filter_dep_text_by_jobnet(
-            self.SAMPLE_DEP_TEXT, "/BS/01/月次処理/月次1歴日")
+            self.SAMPLE_DEP_TEXT, "/NS/01/monthly_proc/monthly_1st")
         lines = result.strip().splitlines()
         assert len(lines) == 2
 
-    def test_filter_kanmei(self):
-        """監明でフィルタ → 2行"""
+    def test_filter_audit(self):
+        """audit_dailyでフィルタ → 2行"""
         result = filter_dep_text_by_jobnet(
-            self.SAMPLE_DEP_TEXT, "/BS/02/【監明】日次処理")
+            self.SAMPLE_DEP_TEXT, "/NS/02/audit_daily")
         lines = result.strip().splitlines()
         assert len(lines) == 2
 
     def test_no_match(self):
         """存在しないパスでフィルタ → 空"""
         result = filter_dep_text_by_jobnet(
-            self.SAMPLE_DEP_TEXT, "/BS/99/存在しない")
+            self.SAMPLE_DEP_TEXT, "/NS/99/nonexistent")
         assert result.strip() == ""
 
     def test_ar_data_preserved(self):
         """ar列(先行関係データ)がフィルタ後も残っている"""
         result = filter_dep_text_by_jobnet(
-            self.SAMPLE_DEP_TEXT, "/BS/01/日次処理/日次定例")
+            self.SAMPLE_DEP_TEXT, "/NS/01/daily_proc/daily_batch")
         assert "jobA,jobB,seq;" in result
 
     def test_ar_continuation_lines(self):
         """AR継続行（タブなし）も対象ヘッダの後に残る"""
         text = "\n".join([
-            "net\t/BS/01/日次定例\tjobA,jobB,seq;",
+            "net\t/NS/01/daily_batch\tjobA,jobB,seq;",
             "jobC,jobD,seq;",              # ← AR継続行
             "jobE,jobF,seq;",              # ← AR継続行
-            "net\t/BS/02/月次定例\tjobX,jobY,seq;",
+            "net\t/NS/02/monthly_batch\tjobX,jobY,seq;",
             "jobZ,jobW,seq;",              # ← 別ヘッダのAR継続行
         ])
-        result = filter_dep_text_by_jobnet(text, "/BS/01/日次定例")
+        result = filter_dep_text_by_jobnet(text, "/NS/01/daily_batch")
         lines = result.strip().splitlines()
         assert len(lines) == 3  # ヘッダ1行 + 継続2行
         assert "jobC,jobD,seq;" in result
@@ -590,37 +589,37 @@ class TestFindProducersAcrossJobnets:
     """外部入力ファイルの出力元を親ジョブネット横断で検索するテスト。"""
 
     PARENT_JOBNETS = [
-        "/BS/01/日次処理/日次定例",
-        "/BS/01/月次処理/月次1歴日",
-        "/BS/02/【監明】日次処理",
+        "/NS/01/daily_proc/daily_batch",
+        "/NS/01/monthly_proc/monthly_1st",
+        "/NS/02/audit_daily",
     ]
 
-    # producer_map: ファイルXは日次定例と監明の2箇所で出力されている
+    # producer_map: ファイルXはdaily_batchとaudit_dailyの2箇所で出力されている
     PRODUCER_MAP = {
         "/data/FILE_X": {
-            "/BS/01/日次処理/日次定例/MRKD005",
-            "/BS/02/【監明】日次処理/MRKD005",
+            "/NS/01/daily_proc/daily_batch/JOB005",
+            "/NS/02/audit_daily/JOB005",
         },
         "/data/FILE_Y": {
-            "/BS/01/月次処理/月次1歴日/MRKM010",
+            "/NS/01/monthly_proc/monthly_1st/JOB010",
         },
         "/data/FILE_Z": set(),  # 出力元なし
     }
 
     def test_multiple_jobnets(self):
-        """FILE_Xは日次定例と監明の2つの親ジョブネットで出力される"""
+        """FILE_Xはdaily_batchとaudit_dailyの2つの親JNで出力される"""
         result = find_producers_across_jobnets(
             "/data/FILE_X", self.PRODUCER_MAP, self.PARENT_JOBNETS)
         assert len(result) == 2
-        assert "/BS/01/日次処理/日次定例" in result
-        assert "/BS/02/【監明】日次処理" in result
+        assert "/NS/01/daily_proc/daily_batch" in result
+        assert "/NS/02/audit_daily" in result
 
     def test_single_jobnet(self):
-        """FILE_Yは月次1歴日のみ"""
+        """FILE_Yはmonthly_1stのみ"""
         result = find_producers_across_jobnets(
             "/data/FILE_Y", self.PRODUCER_MAP, self.PARENT_JOBNETS)
         assert len(result) == 1
-        assert "/BS/01/月次処理/月次1歴日" in result
+        assert "/NS/01/monthly_proc/monthly_1st" in result
 
     def test_no_producer(self):
         """FILE_Zは出力元なし → 空dict"""
@@ -638,13 +637,13 @@ class TestFindProducersAcrossJobnets:
         """exclude_jobnetsで指定した親ジョブネットは除外される（ループ防止）"""
         result = find_producers_across_jobnets(
             "/data/FILE_X", self.PRODUCER_MAP, self.PARENT_JOBNETS,
-            exclude_jobnets={"/BS/01/日次処理/日次定例"})
+            exclude_jobnets={"/NS/01/daily_proc/daily_batch"})
         assert len(result) == 1
-        assert "/BS/02/【監明】日次処理" in result
+        assert "/NS/02/audit_daily" in result
 
     def test_exclude_all(self):
         """全親ジョブネットを除外 → 空dict"""
         result = find_producers_across_jobnets(
             "/data/FILE_X", self.PRODUCER_MAP, self.PARENT_JOBNETS,
-            exclude_jobnets={"/BS/01/日次処理/日次定例", "/BS/02/【監明】日次処理"})
+            exclude_jobnets={"/NS/01/daily_proc/daily_batch", "/NS/02/audit_daily"})
         assert result == {}

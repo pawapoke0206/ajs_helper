@@ -57,7 +57,7 @@ class BridgeEditDialog:
         for t in self.bridge_data.get("to", []):
             self.to_text.insert("end", t + "\n")
 
-        ttk.Label(form, text="※1行に1ユニット（正規化パス推奨: /日次処理/...）").grid(
+        ttk.Label(form, text="※1行に1ユニット（正規化パス推奨: /グループ名/ジョブネット名/...）").grid(
             row=3, column=1, sticky="w", padx=5)
 
         # 備考

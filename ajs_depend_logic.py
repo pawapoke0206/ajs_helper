@@ -254,8 +254,8 @@ def _load_bridges(bank):
 def _resolve_bridge_units(bridges, full_set, unit_name_to_fulls, base_dir_to_remove):
     """ブリッジ定義のfrom/toをunit_fullに解決する。
     末尾マッチ方式:
-      - "MRKDC10105" -> unit_fullの末尾が /MRKDC10105 に一致するものを探す
-      - "/取引履歴情報/MRKDC10105" -> より深い階層で絞り込む
+      - "JOBNAME01" -> unit_fullの末尾が /JOBNAME01 に一致するものを探す
+      - "/グループ名/JOBNAME01" -> より深い階層で絞り込む
       - 一意なら採用、複数一致なら警告（上位階層の追加を促す）
     戻り値: ({from_unit_full: [to_unit_full, ...]}, [warnings])
     """
@@ -381,9 +381,9 @@ def _resolve_targets(target_units, final_records):
     """目標ユニット名をunit_full(フルパス)に変換する。
 
     入力形式を3段階でフォールバックし、柔軟に受け付ける:
-      1. unit_full完全一致: "/BS_info/.../MRKD004015"
-      2. サービス名除去後一致: "AJSROOT1:/BS_info/..." -> "/BS_info/..."
-      3. ユニット名末尾一致: "MRKD004015"（一意の場合のみ）
+      1. unit_full完全一致: "/グループ名/.../JOBNAME01"
+      2. サービス名除去後一致: "AJSROOT1:/グループ名/..." -> "/グループ名/..."
+      3. ユニット名末尾一致: "JOBNAME01"（一意の場合のみ）
 
     Returns:
         (target_unit_fulls, not_found, ambiguous, full_set, unit_name_to_fulls):

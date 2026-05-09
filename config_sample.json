@@ -3,5 +3,19 @@
     "SampleBank": {
       "BSDIR": "/usr/home/sample"
     }
-  }
+  },
+  "mgmt_table_mapping": {
+    "SampleShell1": "SampleTable1",
+    "SampleShell2": "SampleTable1"
+  },
+  "db_exclude_tables": [
+    "SampleExcludeTable1",
+    "SampleExcludeTable2"
+  ],
+  "sub_shell_write": [
+    "SampleWriteShell1"
+  ],
+  "sub_shell_read": [
+    "SampleReadShell1"
+  ]
 }
